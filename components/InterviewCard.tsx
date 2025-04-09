@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import Link from 'next/link';
 import { getRandomInterviewCover } from '@/lib/utils';
 import DisplayTechIcons from './DisplayTechIcons';
-const InterviewCard = ({interviewId,userId,role,type,techstack,createdAt}:InterviewCardProps) => {
+const InterviewCard = ({id,userId,role,type,techstack,createdAt}:InterviewCardProps) => {
   // console.log(techstack)
   const feedback = null as Feedback | null;
   // technical
@@ -43,7 +43,7 @@ width={22} height={22} />
   <div className='flex flex-row justify-between '>
     <DisplayTechIcons techStack={techstack} />
  <Button className='btn-primary'>
-  <Link href={feedback ? `/interview/${interviewId}/feedback`:`/interview/${interviewId}`} >
+  <Link href={feedback ? `/interview/${id}/feedback`:`/interview/${id}`} >
   {feedback ? 'Check feedback':'View Interview'}
   </Link>
 
