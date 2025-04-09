@@ -49,6 +49,7 @@ const AuthForm = ({type}:{type:FormType}) => {
           email,
           password
         )
+        // console.log(userCredientials.user.uid,"uid")
         const result = await signUp({
           uid: userCredientials.user.uid,
           name :name!,
@@ -59,7 +60,7 @@ const AuthForm = ({type}:{type:FormType}) => {
           toast.error(result?.message)
           return ;
         }
-        console.log("Sign up", values)
+        // console.log("Sign up", values)
         toast.success("Account created successfully. please sign in")
         router.push("/sign-in")
       }else{   
@@ -70,6 +71,7 @@ const AuthForm = ({type}:{type:FormType}) => {
           password
         )
         const idToken = await userCredientials.user.getIdToken()
+        console.log(idToken,idToken)
         if(!idToken){
           toast.error("Failed to sign in")
           return ;
@@ -79,7 +81,7 @@ const AuthForm = ({type}:{type:FormType}) => {
           email,
           idToken
         })
-        console.log("Sign in", values)           
+        // console.log("Sign in", values)           
         toast.success("Sign in successful")
         router.push("/")
       }
@@ -88,7 +90,7 @@ const AuthForm = ({type}:{type:FormType}) => {
       toast.error(`There was an error: ${error}`)
     }
 
-    console.log(values)
+    // console.log(values)
   }
   const isSignIn = type === "sign-in"  
   return (

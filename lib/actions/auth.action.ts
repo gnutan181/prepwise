@@ -48,11 +48,11 @@ export async function signIn(params:SignInParams) {
             }
         }
         await setSessionCookie(idToken)
-    } catch (e) {
-        console.log(e)
+    } catch (e :any) {
+        // console.log(e)
         return {
             success :false,
-            message :"Failed to sign in",
+            message :e.message || "Failed to sign in",
         }
 
     }
@@ -85,9 +85,12 @@ export async function getCurrentUser(): Promise<User | null> {
         const decodedClaims = await auth.verifySessionCookie(sessionCookie , true);
         // console.log(decodedClaims,"decodedClaims")
         const userRecord = await db.collection('users').doc(decodedClaims.uid).get()
+        // console.log("userRecord",userRecord)
+        // console.log(!userRecord.exists,"!userRecord.exists")
         if(!userRecord.exists){
             return null
         }
+        
         return {
             ...userRecord.data(),
             id:userRecord.id,
@@ -101,8 +104,51 @@ export async function getCurrentUser(): Promise<User | null> {
 export  async function isAuthenticated(){
     const user  = await getCurrentUser()
     // console.log(user,"user")
+    // console.log(user,"user")
     return !!user;
     // !{name:'richappy'} -> false -> !false -> true
     // first ! convert into boolean and ! convert into boolean again with actual value in a boolean -> this method is used  check if existance or not into boolean 
 
+}
+
+export async function getInterviewsByUserId(userId:string): Promise<Interview[] | null> {
+    try {
+        // console.log(userId,"id")
+        const interviews = await db.collection('interviews').where('userId','==',userId).orderBy('createdAt','desc').get()
+        // if(interviews.empty){
+        //     return null
+        // }
+        return interviews.docs.map((doc)=>({
+             
+                ...doc.data(),
+                id:doc.id,
+            
+        })) as Interview[]
+        // return interviewData 
+    } catch (error) {
+        console.error(error)
+        return null
+    }
+}
+
+export async function getLatestInterviews(params:GetLatestInterviewsParams): Promise<Interview[] | null> {
+    const {userId,limit=20} = params;
+    try {
+        const interviews = await db.collection('interviews').where('userId','!=',userId).orderBy('createdAt','desc').where('finalized','==',true)
+        .limit(limit).
+        get()
+        // if(interviews.empty){
+        //     return null
+        // }
+        return interviews.docs.map((doc)=>({
+             
+                ...doc.data(),
+                id:doc.id,
+            
+        })) as Interview[]
+        // return interviewData 
+    } catch (error) {
+        console.error(error)
+        return null
+    }
 }
