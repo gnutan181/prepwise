@@ -10,8 +10,8 @@ const monaSans = Mona_Sans({
 
 
 export const metadata: Metadata = {
-  title: "Rupay",
-  description: "An AI-powered platform for preparing for",
+  title: "Intervia",
+  description: "An AI-powered platform for preparing for interview behavioural and mixed. Enhance your job seeking journey. Why faces anxiety for giving in industry. Prepare yourself with Intervia and improve with feedback.",
 };
 
 export default function RootLayout({

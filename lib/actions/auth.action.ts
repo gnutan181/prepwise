@@ -10,7 +10,7 @@ export async function signUp(params:SignUpParams) {
  try {
     const userRecord = await db.collection('users').doc(uid).get()
     // console.log(userRecord,"userrecord")
-    if(userRecord.exists){
+    if(userRecord?.exists){
         return {
             success :false,
             message :"User already exists",
@@ -75,22 +75,20 @@ export async function setSessionCookie(idToken : string){
 
 export async function getCurrentUser(): Promise<User | null> {
     const cookieStore = await cookies()
-    // console.log(cookieStore,"cookiestore")
+    
     const sessionCookie = cookieStore.get('session')?.value;
-    // console.log(sessionCookie,"sessionCookei")
+
     if(!sessionCookie){
         return null
     }
     try {
         const decodedClaims = await auth.verifySessionCookie(sessionCookie , true);
-        // console.log(decodedClaims,"decodedClaims")
+ 
         const userRecord = await db.collection('users').doc(decodedClaims.uid).get()
-        // console.log("userRecord",userRecord)
-        // console.log(!userRecord.exists,"!userRecord.exists")
+
         if(!userRecord.exists){
             return null
-        }
-        
+        }        
         return {
             ...userRecord.data(),
             id:userRecord.id,

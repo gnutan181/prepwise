@@ -1,5 +1,6 @@
 "use client"
 import { interviewer } from '@/constants';
+import { createFeedback } from '@/lib/actions/general.action';
 import { cn } from '@/lib/utils';
 import { vapi } from '@/lib/vapi.sdk';
 import Image from 'next/image'
@@ -21,16 +22,11 @@ interface SavedMessage {
 const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
     const router  = useRouter();
     const [isSpeaking,setIsSpeaking] =useState(false)
-    // const isSpeaking = true;
-    const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
-    // const callStatus = CallStatus.FINISHED;
-    // const messages = [
-    //     'Whats your name?',
-    //     'My name is Nutan Gupta, nice to meet you!',
-    // ]
-    const [messages, setMessages] = useState<SavedMessage[]>([]);
-    // const lastMessage = messages[messages.length -1 ]
 
+    const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
+ 
+    const [messages, setMessages] = useState<SavedMessage[]>([]);
+ 
     useEffect(()=>{
         const onCallStart = () => {
             setCallStatus(CallStatus.ACTIVE)    
@@ -48,7 +44,7 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
     const onSpeechEnd =()=>setIsSpeaking(false)
     const onError = (error:Error) => {
         console.error('Error:',error);
-        // setCallStatus(CallStatus.FINISHED)
+       
     }
     vapi.on('call-start',onCallStart);
     vapi.on('call-end',onCallEnd);
@@ -67,11 +63,13 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
 },[])
     const handleGenerateFeedback = async(mesages:SavedMessage[])=>{
         console.log("generate Feedback")
+        
         //TODO : Create a server action that generate feedback
-        const {success,id} = {
-        success :true,
-        id: "feedback-id"
-        }
+        const {success,feedbackId:id}= await createFeedback({
+            interviewId:interviewId!,
+            userId:userId!,
+            transcript:messages
+        })
         if(success && id){
             router.push('/interview/${interviewId/feedback');
         }else{
