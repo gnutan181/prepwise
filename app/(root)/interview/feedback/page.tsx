@@ -13,10 +13,15 @@ const {id} = await params;
 const user = await getCurrentUser();
 const interview  = await getInterviewsById(id);
 if(!interview) redirect('/')
+  console.log(user)
+  if (!user?.id) {
+    console.error("User ID is missing.");
+    return; // Or throw an error, or show a message, etc.
+  }
     const feedback = await getFeedbackByInterviewId(
 {
     interviewId:id,
-    userId : user?.id!,
+    userId : user.id!,
 
 })
 console.log(feedback)

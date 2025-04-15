@@ -1,6 +1,6 @@
 import InterviewCard from '@/components/InterviewCard'
 import { Button } from '@/components/ui/button'
-import { dummyInterviews } from '@/constants'
+// import { dummyInterviews } from '@/constants'
 import { getCurrentUser } from '@/lib/actions/auth.action'
 import { getInterviewsByUserId, getLatestInterviews } from '@/lib/actions/general.action'
 import Image from 'next/image'
@@ -11,13 +11,21 @@ const Page =async () => {
   const user = await getCurrentUser();
   // 
   console.log(user, "user")
-const [userInterviews,latestInterviews] = await Promise.all([
-  getInterviewsByUserId(user?.id!),
-  getLatestInterviews({userId:user?.id!})
-])  
- 
-  const hasPastInterviews = userInterviews?.length > 0;
-  const hasUpcomingInterviews = latestInterviews?.length > 0;
+  if (!user?.id) {
+    console.error("User ID is undefined.");
+    return; // or redirect, throw, show message
+  }
+  
+  const [userInterviews, latestInterviews] = await Promise.all([
+    getInterviewsByUserId(user.id),
+    getLatestInterviews({ userId: user.id })
+  ]);
+
+  const hasPastInterviews = (userInterviews ?? []).length > 0;
+  const hasUpcomingInterviews = (latestInterviews ?? []).length > 0;
+  
+  // const hasPastInterviews = userInterviews?.length > 0;
+  // const hasUpcomingInterviews = latestInterviews?.length > 0;
   return (
     <>
       <section className='card-cta'>

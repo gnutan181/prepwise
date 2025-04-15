@@ -87,7 +87,7 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
         }
     }
 
-   },[messages,callStatus,userId,type]) 
+   },[messages,callStatus,userId,type,handleGenerateFeedback]) 
 
     const handleCall = async()=>{
 setCallStatus(CallStatus.CONNECTING)
