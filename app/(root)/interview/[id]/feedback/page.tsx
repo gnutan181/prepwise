@@ -24,7 +24,7 @@ if(!interview) redirect('/')
     userId : user.id!,
 
 })
-console.log(feedback)
+console.log(feedback,"feedback")
   return (
     <section className="section-feedback">
       <div className="flex flex-row justify-center">

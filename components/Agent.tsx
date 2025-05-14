@@ -20,13 +20,14 @@ interface SavedMessage {
     content:string;
 }
 const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
+    console.log("userName,userId,type,interviewId,questions",userName,userId,type,interviewId,questions)
     const router  = useRouter();
     const [isSpeaking,setIsSpeaking] =useState(false)
 
     const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
  
     const [messages, setMessages] = useState<SavedMessage[]>([]);
- 
+ console.log(messages)
     useEffect(()=>{
         const onCallStart = () => {
             setCallStatus(CallStatus.ACTIVE)    
@@ -37,6 +38,7 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
     const onMesssage = (message:Message)=>{
         if(message.type === 'transcript' && message.transcriptType === 'final'){
      const newMessage = {role :message.role,content:message.transcript}
+     console.log(newMessage,"newMesas")
      setMessages((prev)=>[...prev,newMessage]);
         }
     }
@@ -61,8 +63,8 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
             vapi.off('error',onError);
         }    
 },[])
-    const handleGenerateFeedback = async(mesages:SavedMessage[])=>{
-        console.log("generate Feedback")
+    const handleGenerateFeedback = async(messages:SavedMessage[])=>{
+        console.log("generate Feedback",messages)
         
         //TODO : Create a server action that generate feedback
         const {success,feedbackId:id}= await createFeedback({
@@ -71,7 +73,7 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
             transcript:messages
         })
         if(success && id){
-            router.push('/interview/${interviewId/feedback');
+            router.push(`/interview/${interviewId}/feedback`);
         }else{
             console.log('Error saving feedback')
             router.push('/')
@@ -92,12 +94,13 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
     const handleCall = async()=>{
 setCallStatus(CallStatus.CONNECTING)
 if(type === "generate"){
-    await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!,{
+   const k=  await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!,{
         variableValues:{
             username :userName,
             userid :userId,
         }
     })
+    console.log("k",k)
 }else{
     let formattedQuestions='';
     if(questions){
@@ -105,11 +108,13 @@ if(type === "generate"){
             `- ${question}`
         ).join('\n');
     }
-    await vapi.start(interviewer,{
+
+  const va =  await vapi.start(interviewer,{
         variableValues:{
             questions:formattedQuestions
         }
     })
+// console.log("va",va)
 }
 
     setCallStatus(CallStatus.ACTIVE)
@@ -119,6 +124,7 @@ if(type === "generate"){
         vapi.stop()
     }
     const latestMessage = messages[messages.length -1 ]?.content;
+    console.log(latestMessage,"latest mesa")
     const isCallInactiveOrFinished = callStatus === CallStatus.INACTIVE || 
     callStatus === CallStatus.FINISHED
   return (
@@ -141,7 +147,7 @@ if(type === "generate"){
     </div>
     </div>      
     </div>
-    {messages.length > 0  && (
+    {messages?.length > 0  && (
         <div className='transcript-border'>
             <div className='transcript'>
 <p key={latestMessage} className={cn('transition-opacity duration-500 opacity-0','animate-fadeIn opacity-100')}>
