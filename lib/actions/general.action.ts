@@ -61,7 +61,7 @@ const formattedTranscript = transcript.map((sentence:{role:string,content:string
 )).join('');
 console.log(formattedTranscript,"formattedTranscript")
 const {object:{totalScore,categoryScores,strengths,areasForImprovement,finalAssessment}} = await generateObject({
-    model:google('gemini-2.0-flash-001',{
+    model:google('gemini-3-flash-preview',{
         structuredOutputs:false,
     }),
     schema: feedbackSchema,
@@ -87,6 +87,7 @@ const feedback = await db.collection('feedback').add({
     totalScore,
     categoryScores,strengths,areasForImprovement,
     finalAssessment,
+    finalized: true,
     createdAt : new Date().toISOString()
 })
 console.log(feedback,"feedback")

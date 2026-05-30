@@ -1,7 +1,21 @@
 import Vapi from "@vapi-ai/web";
 // import { useState, useEffect } from "react";
 
-export const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN || ""); // Get Public Token from Dashboard > Accounts Page
+let vapiInstance: Vapi | null = null;
+
+export const getVapi = () => {
+  const token = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
+
+  if (!token) {
+    throw new Error("NEXT_PUBLIC_VAPI_WEB_TOKEN is not configured.");
+  }
+
+  if (!vapiInstance) {
+    vapiInstance = new Vapi(token);
+  }
+
+  return vapiInstance;
+};
 
 // function VapiAssistant() {
 //   const [callStatus, setCallStatus] = useState("inactive");

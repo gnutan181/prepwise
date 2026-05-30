@@ -5,6 +5,15 @@ import { cookies } from "next/headers";
 
 // import { Sign } from "crypto"
 const ONE_WEEK = 60 * 60 * 24 * 7 
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+
+    return fallback;
+}
+
 export async function signUp(params:SignUpParams) {
  const {uid , name ,email} = params;
  try {
@@ -22,17 +31,20 @@ export async function signUp(params:SignUpParams) {
             success: true,
             message: "Account created successfully. Please sign in.",
           };
- } catch (error : any) {
+ } catch (error: unknown) {
     console.error("Error signing up user:", error);
-    if(error.code === 'auth/email-already-exists'){
-        return {
-            success :false,
-            message :"Email already exists",
-        }
+    const message = getErrorMessage(error, 'Failed to create an account');
+
+    if (message.includes('email-already-exists')) {
+      return {
+          success :false,
+          message :"Email already exists",
+      }
     }
+
     return {
         succes :false,
-        message : 'Failed to create an account',
+        message,
     }
  }   
 }
@@ -48,11 +60,11 @@ export async function signIn(params:SignInParams) {
             }
         }
         await setSessionCookie(idToken)
-    } catch (e :any) {
+    } catch (error: unknown) {
         // console.log(e)
         return {
             success :false,
-            message :e.message || "Failed to sign in",
+            message :getErrorMessage(error, "Failed to sign in"),
         }
 
     }

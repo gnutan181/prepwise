@@ -2,11 +2,12 @@
 import { interviewer } from '@/constants';
 import { createFeedback } from '@/lib/actions/general.action';
 import { cn } from '@/lib/utils';
-import { vapi } from '@/lib/vapi.sdk';
+import { getVapi } from '@/lib/vapi.sdk';
 import Image from 'next/image'
 import { useRouter } from 'next/navigation';
 // import { useRouter } from 'next/router';
-import React, { useEffect, useState }  from 'react'
+import React, { useEffect, useRef, useState }  from 'react'
+import { toast } from 'sonner';
 // import { set } from 'zod';
 
 enum CallStatus{
@@ -19,21 +20,40 @@ interface SavedMessage {
     role:'user' | 'system' | 'assistant';
     content:string;
 }
+
+const getErrorMessage = (error: unknown) => {
+    if (error instanceof Error && error.message) return error.message;
+    if (typeof error === 'string') return error;
+    return 'Something went wrong while starting the interview call.';
+}
+
 const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
     console.log("userName,userId,type,interviewId,questions",userName,userId,type,interviewId,questions)
     const router  = useRouter();
     const [isSpeaking,setIsSpeaking] =useState(false)
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
  
     const [messages, setMessages] = useState<SavedMessage[]>([]);
- console.log(messages)
+    const hadCallError = useRef(false);
+ console.log(messages,"messages")
     useEffect(()=>{
+        let vapi;
+
+        try {
+            vapi = getVapi();
+        } catch (error) {
+            const message = getErrorMessage(error);
+            setErrorMessage(message);
+            return;
+        }
+
         const onCallStart = () => {
             setCallStatus(CallStatus.ACTIVE)    
     }
     const onCallEnd = () => {
-        setCallStatus(CallStatus.FINISHED)    
+        setCallStatus(hadCallError.current ? CallStatus.INACTIVE : CallStatus.FINISHED)    
     }
     const onMesssage = (message:Message)=>{
         if(message.type === 'transcript' && message.transcriptType === 'final'){
@@ -45,8 +65,13 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
     const onSpeechStart =()=>setIsSpeaking(true)
     const onSpeechEnd =()=>setIsSpeaking(false)
     const onError = (error:Error) => {
-        console.error('Error:',error);
-       
+        hadCallError.current = true;
+        const message = getErrorMessage(error);
+
+        console.error('Vapi error:', error);
+        setErrorMessage(message);
+        setCallStatus(CallStatus.INACTIVE);
+        toast.error(message);
     }
     vapi.on('call-start',onCallStart);
     vapi.on('call-end',onCallEnd);
@@ -63,65 +88,113 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
             vapi.off('error',onError);
         }    
 },[])
-    const handleGenerateFeedback = async(messages:SavedMessage[])=>{
+  useEffect(()=>{ 
+    if(callStatus !== CallStatus.FINISHED){
+        return;
+    }
+
+    if(type === "generate"){
+        router.push('/')
+        return;
+    }
+
+    if(!interviewId || !userId){
+        setErrorMessage('Missing interview context. Please reload and try again.');
+        setCallStatus(CallStatus.INACTIVE);
+        return;
+    }
+console.log("messages use",interviewId,userId,messages)
+    if(messages.length === 0){
+        const message = 'No interview transcript was captured, so feedback could not be generated.';
+        setErrorMessage(message);
+        setCallStatus(CallStatus.INACTIVE);
+        toast.error(message);
+        return;
+    }
+console.log("generate Feedback",messages)
+    const saveFeedback = async () => {
         console.log("generate Feedback",messages)
-        
-        //TODO : Create a server action that generate feedback
+
         const {success,feedbackId:id}= await createFeedback({
-            interviewId:interviewId!,
-            userId:userId!,
+            interviewId,
+            userId,
             transcript:messages
         })
+
         if(success && id){
             router.push(`/interview/${interviewId}/feedback`);
-        }else{
-            console.log('Error saving feedback')
-            router.push('/')
+            return;
         }
-    }
-  useEffect(()=>{ 
-    if(callStatus === CallStatus.FINISHED){
-        if(type === "generate"){
-            router.push('/')
 
-        }else{
-            handleGenerateFeedback(messages)
-        }
-    }
+        const message = 'Error saving feedback';
+        setErrorMessage(message);
+        toast.error(message);
+        router.push('/')
+    };
 
-   },[messages,callStatus,userId,type,handleGenerateFeedback]) 
+     saveFeedback();
+
+   },[callStatus,interviewId,messages,router,type,userId]) 
 
     const handleCall = async()=>{
-setCallStatus(CallStatus.CONNECTING)
-if(type === "generate"){
-   const k=  await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!,{
-        variableValues:{
-            username :userName,
-            userid :userId,
-        }
-    })
-    console.log("k",k)
-}else{
-    let formattedQuestions='';
-    if(questions){
-        formattedQuestions = questions.map((question)=>
-            `- ${question}`
-        ).join('\n');
-    }
+        setErrorMessage(null);
+        hadCallError.current = false;
+        setMessages([]);
+        setCallStatus(CallStatus.CONNECTING)
 
-  const va =  await vapi.start(interviewer,{
-        variableValues:{
-            questions:formattedQuestions
-        }
-    })
-// console.log("va",va)
-}
+        try {
+            const vapi = getVapi();
 
-    setCallStatus(CallStatus.ACTIVE)
+            if(type === "generate"){
+                const workflowId = process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID;
+
+                if (!workflowId) {
+                    throw new Error('NEXT_PUBLIC_VAPI_WORKFLOW_ID is not configured.');
+                }
+
+                const k = await vapi.start(workflowId,{
+                    variableValues:{
+                        username :userName,
+                        userid :userId,
+                    }
+                })
+                console.log("k",k)
+            }else{
+                let formattedQuestions='';
+                if(questions){
+                    formattedQuestions = questions.map((question)=>
+                        `- ${question}`
+                    ).join('\n');
+                }
+
+                const va =  await vapi.start(interviewer,{
+                    variableValues:{
+                        questions:formattedQuestions
+                    }
+                })
+                console.log("va",va)
+            }
+
+            setCallStatus(CallStatus.ACTIVE)
+        } catch (error) {
+            const message = getErrorMessage(error);
+
+            console.error('Failed to start call:', error);
+            setErrorMessage(message);
+            setCallStatus(CallStatus.INACTIVE);
+            toast.error(message);
+        }
     }
     const handleDisconnect = async()=>{
         setCallStatus(CallStatus.FINISHED)
-        vapi.stop()
+        hadCallError.current = false;
+
+        try {
+            const vapi = getVapi();
+            vapi.stop()
+        } catch (error) {
+            console.error('Failed to stop call:', error);
+        }
     }
     const latestMessage = messages[messages.length -1 ]?.content;
     console.log(latestMessage,"latest mesa")
@@ -156,6 +229,9 @@ if(type === "generate"){
             </div>
 
         </div>
+    )}
+    {errorMessage && (
+        <p className='mt-4 text-center text-sm text-destructive'>{errorMessage}</p>
     )}
     <div className='w-full flex justify-center'>
 {callStatus !== 'ACTIVE'? (
