@@ -61,9 +61,16 @@ export async function POST(request:Request){
               .map((item) => item.trim())
               .filter(Boolean);
 
-        if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-          throw new Error("GOOGLE_GENERATIVE_AI_API_KEY is not configured.");
+        const googleApiKey =
+          process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() ||
+          process.env.GEMINI_API_KEY?.trim() ||
+          process.env.GOOGLE_API_KEY?.trim();
+
+        if (!googleApiKey) {
+          throw new Error("Google generative AI API key is not configured.");
         }
+
+        process.env.GOOGLE_GENERATIVE_AI_API_KEY = googleApiKey;
 
         const { object } = await generateObject({
           model: google("gemini-3-flash-preview"),

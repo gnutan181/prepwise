@@ -84,9 +84,14 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
     const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
  
     const [messages, setMessages] = useState<SavedMessage[]>([]);
+    const callStatusRef = useRef(CallStatus.INACTIVE);
     const hadCallError = useRef(false);
     const isStartingCall = useRef(false);
     const isEndingCall = useRef(false);
+    const updateCallStatus = (status: CallStatus) => {
+        callStatusRef.current = status;
+        setCallStatus(status);
+    }
  console.log(messages,"messages")
     useEffect(()=>{
         let vapi;
@@ -102,12 +107,12 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
         const onCallStart = () => {
             isEndingCall.current = false;
             hadCallError.current = false;
-            setCallStatus(CallStatus.ACTIVE)    
+            updateCallStatus(CallStatus.ACTIVE)
     }
     const onCallEnd = () => {
         isEndingCall.current = false;
         setIsSpeaking(false);
-        setCallStatus(hadCallError.current ? CallStatus.INACTIVE : CallStatus.FINISHED)    
+        updateCallStatus(hadCallError.current ? CallStatus.INACTIVE : CallStatus.FINISHED)
     }
     const onMesssage = (message:Message)=>{
         if(message.type === 'transcript' && message.transcriptType === 'final'){
@@ -121,8 +126,13 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
     const onError = (error:Error) => {
         const message = getErrorMessage(error);
 
-        if (isEndingCall.current && isExpectedStopError(message)) {
-            console.info('Vapi call ended after local stop:', getErrorDetails(error));
+        const isEndingOrEnded =
+            isEndingCall.current ||
+            callStatusRef.current === CallStatus.ENDING ||
+            callStatusRef.current === CallStatus.FINISHED;
+
+        if (isEndingOrEnded && isExpectedStopError(message)) {
+            console.info('Vapi call ended normally:', getErrorDetails(error));
             return;
         }
 
@@ -131,7 +141,7 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
 
         console.error('Vapi error:', getErrorDetails(error));
         setErrorMessage(message);
-        setCallStatus(CallStatus.INACTIVE);
+        updateCallStatus(CallStatus.INACTIVE);
         toast.error(message);
     }
     vapi.on('call-start',onCallStart);
@@ -161,14 +171,14 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
 
     if(!interviewId || !userId){
         setErrorMessage('Missing interview context. Please reload and try again.');
-        setCallStatus(CallStatus.INACTIVE);
+        updateCallStatus(CallStatus.INACTIVE);
         return;
     }
 console.log("messages use",interviewId,userId,messages)
     if(messages.length === 0){
         const message = 'No interview transcript was captured, so feedback could not be generated.';
         setErrorMessage(message);
-        setCallStatus(CallStatus.INACTIVE);
+        updateCallStatus(CallStatus.INACTIVE);
         toast.error(message);
         return;
     }
@@ -207,7 +217,7 @@ console.log("generate Feedback",messages)
         hadCallError.current = false;
         isEndingCall.current = false;
         setMessages([]);
-        setCallStatus(CallStatus.CONNECTING)
+        updateCallStatus(CallStatus.CONNECTING)
 
         try {
             const vapi = getVapi();
@@ -242,13 +252,13 @@ console.log("generate Feedback",messages)
                 console.log("va",va)
             }
 
-            setCallStatus(CallStatus.ACTIVE)
+            updateCallStatus(CallStatus.ACTIVE)
         } catch (error) {
             const message = getErrorMessage(error);
 
             console.error('Failed to start call:', getErrorDetails(error));
             setErrorMessage(message);
-            setCallStatus(CallStatus.INACTIVE);
+            updateCallStatus(CallStatus.INACTIVE);
             toast.error(message);
         } finally {
             isStartingCall.current = false;
@@ -261,19 +271,19 @@ console.log("generate Feedback",messages)
 
         hadCallError.current = false;
         isEndingCall.current = true;
-        setCallStatus(CallStatus.ENDING)
+        updateCallStatus(CallStatus.ENDING)
 
         try {
             const vapi = getVapi();
             await vapi.stop()
-            setCallStatus(CallStatus.FINISHED)
+            updateCallStatus(CallStatus.FINISHED)
         } catch (error) {
             const message = getErrorMessage(error);
 
             isEndingCall.current = false;
             console.error('Failed to stop call:', getErrorDetails(error));
             setErrorMessage(message);
-            setCallStatus(CallStatus.INACTIVE);
+            updateCallStatus(CallStatus.INACTIVE);
             toast.error(message);
         }
     }
