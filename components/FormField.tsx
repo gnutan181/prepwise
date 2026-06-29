@@ -33,6 +33,7 @@ const FormField = <T extends FieldValues>({
               <FormControl>
                 <Input className='input' placeholder={placeholder}
                 type={type}
+                suppressHydrationWarning
                  {...field} />
               </FormControl>
            

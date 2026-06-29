@@ -114,7 +114,7 @@ const AuthForm = ({type}:{type:FormType}) => {
          <FormField
        control={form.control} name="password" label="Password" placeholder="enter your password" type="password" />
 
-        <Button className="btn" type="submit">{isSignIn ? "Sign-in":"Create an Account"}</Button>
+        <Button className="btn" type="submit" suppressHydrationWarning>{isSignIn ? "Sign-in":"Create an Account"}</Button>
       </form>
     </Form>
     <p className="text-center">

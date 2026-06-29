@@ -14,6 +14,7 @@ enum CallStatus{
     INACTIVE = 'INACTIVE',
     CONNECTING ='CONNECTING',
     ACTIVE ='ACTIVE',
+    ENDING='ENDING',
     FINISHED='FINISHED',
 }
 interface SavedMessage {
@@ -21,10 +22,57 @@ interface SavedMessage {
     content:string;
 }
 
-const getErrorMessage = (error: unknown) => {
+const FALLBACK_ERROR_MESSAGE = 'Something went wrong while starting the interview call.';
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null;
+
+const readErrorMessage = (error: unknown): string | null => {
     if (error instanceof Error && error.message) return error.message;
-    if (typeof error === 'string') return error;
-    return 'Something went wrong while starting the interview call.';
+    if (typeof error === 'string' && error.trim()) return error;
+
+    if (isObject(error)) {
+        const nestedError = readErrorMessage(error.error);
+        if (nestedError) return nestedError;
+
+        for (const key of ['message', 'errorMsg', 'reason']) {
+            const value = error[key];
+            if (typeof value === 'string' && value.trim()) return value;
+        }
+
+        if (error.details) {
+            return typeof error.details === 'string'
+                ? error.details
+                : JSON.stringify(error.details);
+        }
+    }
+
+    return null;
+}
+
+const getErrorMessage = (error: unknown) => {
+    return readErrorMessage(error) ?? FALLBACK_ERROR_MESSAGE;
+}
+
+const getErrorDetails = (error: unknown) => {
+    if (error instanceof Error) {
+        return {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+        };
+    }
+
+    return error;
+}
+
+const isExpectedStopError = (message: string) => {
+    const normalizedMessage = message.toLowerCase();
+
+    return (
+        normalizedMessage.includes('meeting ended due to ejection') ||
+        normalizedMessage.includes('meeting has ended')
+    );
 }
 
 const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
@@ -37,6 +85,8 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
  
     const [messages, setMessages] = useState<SavedMessage[]>([]);
     const hadCallError = useRef(false);
+    const isStartingCall = useRef(false);
+    const isEndingCall = useRef(false);
  console.log(messages,"messages")
     useEffect(()=>{
         let vapi;
@@ -50,9 +100,13 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
         }
 
         const onCallStart = () => {
+            isEndingCall.current = false;
+            hadCallError.current = false;
             setCallStatus(CallStatus.ACTIVE)    
     }
     const onCallEnd = () => {
+        isEndingCall.current = false;
+        setIsSpeaking(false);
         setCallStatus(hadCallError.current ? CallStatus.INACTIVE : CallStatus.FINISHED)    
     }
     const onMesssage = (message:Message)=>{
@@ -65,10 +119,17 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
     const onSpeechStart =()=>setIsSpeaking(true)
     const onSpeechEnd =()=>setIsSpeaking(false)
     const onError = (error:Error) => {
-        hadCallError.current = true;
         const message = getErrorMessage(error);
 
-        console.error('Vapi error:', error);
+        if (isEndingCall.current && isExpectedStopError(message)) {
+            console.info('Vapi call ended after local stop:', getErrorDetails(error));
+            return;
+        }
+
+        hadCallError.current = true;
+        isEndingCall.current = false;
+
+        console.error('Vapi error:', getErrorDetails(error));
         setErrorMessage(message);
         setCallStatus(CallStatus.INACTIVE);
         toast.error(message);
@@ -137,8 +198,14 @@ console.log("generate Feedback",messages)
    },[callStatus,interviewId,messages,router,type,userId]) 
 
     const handleCall = async()=>{
+        if (isStartingCall.current || callStatus === CallStatus.CONNECTING || callStatus === CallStatus.ACTIVE) {
+            return;
+        }
+
+        isStartingCall.current = true;
         setErrorMessage(null);
         hadCallError.current = false;
+        isEndingCall.current = false;
         setMessages([]);
         setCallStatus(CallStatus.CONNECTING)
 
@@ -152,7 +219,7 @@ console.log("generate Feedback",messages)
                     throw new Error('NEXT_PUBLIC_VAPI_WORKFLOW_ID is not configured.');
                 }
 
-                const k = await vapi.start(workflowId,{
+                const k = await vapi.start(undefined, undefined, undefined, workflowId,{
                     variableValues:{
                         username :userName,
                         userid :userId,
@@ -179,21 +246,35 @@ console.log("generate Feedback",messages)
         } catch (error) {
             const message = getErrorMessage(error);
 
-            console.error('Failed to start call:', error);
+            console.error('Failed to start call:', getErrorDetails(error));
             setErrorMessage(message);
             setCallStatus(CallStatus.INACTIVE);
             toast.error(message);
+        } finally {
+            isStartingCall.current = false;
         }
     }
     const handleDisconnect = async()=>{
-        setCallStatus(CallStatus.FINISHED)
+        if (isEndingCall.current || callStatus !== CallStatus.ACTIVE) {
+            return;
+        }
+
         hadCallError.current = false;
+        isEndingCall.current = true;
+        setCallStatus(CallStatus.ENDING)
 
         try {
             const vapi = getVapi();
-            vapi.stop()
+            await vapi.stop()
+            setCallStatus(CallStatus.FINISHED)
         } catch (error) {
-            console.error('Failed to stop call:', error);
+            const message = getErrorMessage(error);
+
+            isEndingCall.current = false;
+            console.error('Failed to stop call:', getErrorDetails(error));
+            setErrorMessage(message);
+            setCallStatus(CallStatus.INACTIVE);
+            toast.error(message);
         }
     }
     const latestMessage = messages[messages.length -1 ]?.content;
@@ -235,7 +316,7 @@ console.log("generate Feedback",messages)
     )}
     <div className='w-full flex justify-center'>
 {callStatus !== 'ACTIVE'? (
-    <button className='relative btn-call' onClick={handleCall}>
+    <button className='relative btn-call' onClick={handleCall} disabled={callStatus === CallStatus.CONNECTING || callStatus === CallStatus.ENDING}>
 <span className={cn('absolute animate-ping rounded-full opacity-75',callStatus !== 'CONNECTING' && 'hidden')} />
    
 <span>
