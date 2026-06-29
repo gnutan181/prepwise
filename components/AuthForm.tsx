@@ -71,7 +71,7 @@ const AuthForm = ({type}:{type:FormType}) => {
           password
         )
         const idToken = await userCredientials.user.getIdToken()
-        console.log(idToken,idToken)
+        // console.log(idToken,idToken)
         if(!idToken){
           toast.error("Failed to sign in")
           return ;
@@ -86,7 +86,7 @@ const AuthForm = ({type}:{type:FormType}) => {
         router.push("/")
       }
     } catch (error) {
-      console.log("error", error)
+      // console.log("error", error)
       toast.error(`There was an error: ${error}`)
     }
 

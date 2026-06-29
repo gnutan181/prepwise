@@ -54,12 +54,12 @@ export async function getInterviewsById(id:string): Promise<Interview | null> {
 }
 export async function createFeedback(params:CreateFeedbackParams){
 const {interviewId,userId,transcript} = params;
-console.log(interviewId,userId,transcript)
+// console.log(interviewId,userId,transcript)
 try {
 const formattedTranscript = transcript.map((sentence:{role:string,content:string})=>(
    `- ${sentence.role}:${sentence.content}\n` 
 )).join('');
-console.log(formattedTranscript,"formattedTranscript")
+// console.log(formattedTranscript,"formattedTranscript")
 const {object:{totalScore,categoryScores,strengths,areasForImprovement,finalAssessment}} = await generateObject({
     model:google('gemini-3-flash-preview',{
         structuredOutputs:false,
@@ -80,7 +80,7 @@ const {object:{totalScore,categoryScores,strengths,areasForImprovement,finalAsse
   system:
     "You are a 10+ years experienced professional interviewer, analyzing a mock interview. Your task is to evaluate the candidate based on structured categories",
 })   
-console.log("totalScore,categoryScores,strengths,areasForImprovement,finalAssessment",totalScore,categoryScores,strengths,areasForImprovement,finalAssessment)
+// console.log("totalScore,categoryScores,strengths,areasForImprovement,finalAssessment",totalScore,categoryScores,strengths,areasForImprovement,finalAssessment)
 const feedback = await db.collection('feedback').add({
     interviewId ,
     userId,
@@ -90,13 +90,13 @@ const feedback = await db.collection('feedback').add({
     finalized: true,
     createdAt : new Date().toISOString()
 })
-console.log(feedback,"feedback")
+// console.log(feedback,"feedback")
 return {
     success: true,
     feedbackId :feedback?.id
 }
 } catch (error) {
-    console.log("Error saving feebback",error)
+    // console.log("Error saving feebback",error)
     return {
         success:false
     }

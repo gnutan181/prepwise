@@ -76,7 +76,7 @@ const isExpectedStopError = (message: string) => {
 }
 
 const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
-    console.log("userName,userId,type,interviewId,questions",userName,userId,type,interviewId,questions)
+    // console.log("userName,userId,type,interviewId,questions",userName,userId,type,interviewId,questions)
     const router  = useRouter();
     const [isSpeaking,setIsSpeaking] =useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -92,7 +92,7 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
         callStatusRef.current = status;
         setCallStatus(status);
     }
- console.log(messages,"messages")
+//  console.log(messages,"messages")
     useEffect(()=>{
         let vapi;
 
@@ -117,7 +117,7 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
     const onMesssage = (message:Message)=>{
         if(message.type === 'transcript' && message.transcriptType === 'final'){
      const newMessage = {role :message.role,content:message.transcript}
-     console.log(newMessage,"newMesas")
+    //  console.log(newMessage,"newMesas")
      setMessages((prev)=>[...prev,newMessage]);
         }
     }
@@ -174,7 +174,7 @@ const Agent = ({userName,userId,type,interviewId,questions}:AgentProps) => {
         updateCallStatus(CallStatus.INACTIVE);
         return;
     }
-console.log("messages use",interviewId,userId,messages)
+// console.log("messages use",interviewId,userId,messages)
     if(messages.length === 0){
         const message = 'No interview transcript was captured, so feedback could not be generated.';
         setErrorMessage(message);
@@ -182,9 +182,9 @@ console.log("messages use",interviewId,userId,messages)
         toast.error(message);
         return;
     }
-console.log("generate Feedback",messages)
+// console.log("generate Feedback",messages)
     const saveFeedback = async () => {
-        console.log("generate Feedback",messages)
+        // console.log("generate Feedback",messages)
 
         const {success,feedbackId:id}= await createFeedback({
             interviewId,
@@ -229,13 +229,13 @@ console.log("generate Feedback",messages)
                     throw new Error('NEXT_PUBLIC_VAPI_WORKFLOW_ID is not configured.');
                 }
 
-                const k = await vapi.start(undefined, undefined, undefined, workflowId,{
+                await vapi.start(undefined, undefined, undefined, workflowId,{
                     variableValues:{
                         username :userName,
                         userid :userId,
                     }
                 })
-                console.log("k",k)
+                // console.log("k",k)
             }else{
                 let formattedQuestions='';
                 if(questions){
@@ -244,12 +244,12 @@ console.log("generate Feedback",messages)
                     ).join('\n');
                 }
 
-                const va =  await vapi.start(interviewer,{
+                await vapi.start(interviewer,{
                     variableValues:{
                         questions:formattedQuestions
                     }
                 })
-                console.log("va",va)
+                // console.log("va",va)
             }
 
             updateCallStatus(CallStatus.ACTIVE)
@@ -288,7 +288,7 @@ console.log("generate Feedback",messages)
         }
     }
     const latestMessage = messages[messages.length -1 ]?.content;
-    console.log(latestMessage,"latest mesa")
+    // console.log(latestMessage,"latest mesa")
     const isCallInactiveOrFinished = callStatus === CallStatus.INACTIVE || 
     callStatus === CallStatus.FINISHED
   return (

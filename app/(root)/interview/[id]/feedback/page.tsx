@@ -13,7 +13,7 @@ const {id} = await params;
 const user = await getCurrentUser();
 const interview  = await getInterviewsById(id);
 if(!interview) redirect('/')
-  console.log(user)
+  // console.log(user)
   if (!user?.id) {
     console.error("User ID is missing.");
     return; // Or throw an error, or show a message, etc.
@@ -24,7 +24,7 @@ if(!interview) redirect('/')
     userId : user.id!,
 
 })
-console.log(feedback,"feedback")
+// console.log(feedback,"feedback")
   return (
     <section className="section-feedback">
       <div className="flex flex-row justify-center">

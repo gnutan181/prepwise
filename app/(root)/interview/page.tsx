@@ -4,7 +4,7 @@ import React from 'react'
 
 const page = async() => {
     const user = await getCurrentUser()
-    console.log(user,"user")
+    // console.log(user,"user")
   return (
     <>
      <InterviewGeneratorForm userName={user?.name || ''} userId={user?.id} />

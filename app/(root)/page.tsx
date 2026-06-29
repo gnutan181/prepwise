@@ -10,7 +10,7 @@ import React from 'react'
 const Page =async () => {
   const user = await getCurrentUser();
   // 
-  console.log(user, "user")
+  // console.log(user, "user")
   if (!user?.id) {
     console.error("User ID is undefined.");
     return; // or redirect, throw, show message
